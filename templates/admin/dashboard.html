@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-shield-halved" style="color: var(--accent-purple);"></i> Admin Dashboard</h1>
+        <p>System administration and monitoring</p>
+    </div>
+
+    <!-- System Stats -->
+    <div class="grid-4 mb-4">
+        <div class="kpi-card"><div class="kpi-label">Total Users</div><div class="kpi-value">{{ stats.total_users }}</div><div class="kpi-change positive">{{ stats.active_users }} active</div></div>
+        <div class="kpi-card"><div class="kpi-label">Datasets</div><div class="kpi-value">{{ stats.total_datasets }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Forecasts</div><div class="kpi-value">{{ stats.total_forecasts }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Reports</div><div class="kpi-value">{{ stats.total_reports }}</div></div>
+    </div>
+
+    <div class="grid-4 mb-4">
+        <div class="kpi-card"><div class="kpi-label">Analyses</div><div class="kpi-value">{{ stats.total_analyses }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Opportunities</div><div class="kpi-value">{{ stats.total_opportunities }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Logins (7d)</div><div class="kpi-value">{{ stats.recent_logins }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Activity Today</div><div class="kpi-value">{{ stats.activities_today }}</div></div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="grid-4 mb-4">
+        <a href="{{ url_for('admin_users') }}" class="glass-card" style="text-decoration: none; color: inherit; text-align: center;">
+            <i class="fas fa-users" style="font-size: 2rem; color: var(--accent-blue); margin-bottom: 0.5rem;"></i>
+            <div style="font-weight: 600;">Users</div>
+        </a>
+        <a href="{{ url_for('admin_datasets') }}" class="glass-card" style="text-decoration: none; color: inherit; text-align: center;">
+            <i class="fas fa-database" style="font-size: 2rem; color: var(--accent-green); margin-bottom: 0.5rem;"></i>
+            <div style="font-weight: 600;">Datasets</div>
+        </a>
+        <a href="{{ url_for('admin_activity') }}" class="glass-card" style="text-decoration: none; color: inherit; text-align: center;">
+            <i class="fas fa-list-alt" style="font-size: 2rem; color: var(--accent-amber); margin-bottom: 0.5rem;"></i>
+            <div style="font-weight: 600;">Activity Logs</div>
+        </a>
+        <a href="{{ url_for('admin_database') }}" class="glass-card" style="text-decoration: none; color: inherit; text-align: center;">
+            <i class="fas fa-server" style="font-size: 2rem; color: var(--accent-purple); margin-bottom: 0.5rem;"></i>
+            <div style="font-weight: 600;">Database</div>
+        </a>
+    </div>
+
+    <div class="grid-2">
+        <!-- Recent Users -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-4">
+                <h3>Recent Users</h3>
+                <a href="{{ url_for('admin_users') }}" class="glass-btn" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">View All</a>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                {% for u in recent_users[:8] %}
+                <div class="flex items-center justify-between" style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md);">
+                    <div class="flex items-center gap-3">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; font-weight: 600;">
+                            {{ u.first_name[0] if u.first_name else u.username[0] }}
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; font-weight: 500;">{{ u.full_name }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ u.email }}</div>
+                        </div>
+                    </div>
+                    <span class="badge badge-{{ 'success' if u.is_active else 'danger' }}">{{ 'Active' if u.is_active else 'Inactive' }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-4">
+                <h3>Recent Activity</h3>
+                <a href="{{ url_for('admin_activity') }}" class="glass-btn" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">View All</a>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                {% for a in recent_activity[:8] %}
+                <div class="flex items-center justify-between" style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md);">
+                    <div class="flex items-center gap-3">
+                        <div class="feature-icon blue" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                            <i class="fas fa-{{ 'upload' if 'upload' in a.action else 'chart-line' if 'forecast' in a.action else 'search' if 'analysis' in a.action else 'cog' }}"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; font-weight: 500;">{{ a.action.replace('_', ' ').title() }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ a.user.username if a.user else 'Unknown' }}</div>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">{{ time_ago(a.created_at) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

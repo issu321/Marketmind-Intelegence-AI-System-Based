@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ report.title }}{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header flex items-center justify-between">
+        <div>
+            <h1>{{ report.title }}</h1>
+            <p>{{ report.report_type }} report &middot; {{ report.format.upper() }} &middot; {{ time_ago(report.created_at) }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('download_report', report_id=report.id) }}" class="glass-btn glass-btn-success"><i class="fas fa-download"></i> Download</a>
+            <a href="{{ url_for('reports') }}" class="glass-btn"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+    </div>
+
+    <div class="glass-card mb-4">
+        <h3 class="mb-3">Summary</h3>
+        <p style="color: var(--text-secondary);">{{ report.summary or 'No summary available.' }}</p>
+    </div>
+
+    {% set findings = report.get_key_findings() %}
+    {% if findings %}
+    <div class="glass-card mb-4">
+        <h3 class="mb-3"><i class="fas fa-key" style="color: var(--accent-amber);"></i> Key Findings</h3>
+        {% for f in findings %}
+        <div style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md); margin-bottom: 0.5rem; border-left: 3px solid var(--accent-blue); font-size: 0.875rem;">
+            <i class="fas fa-check-circle" style="color: var(--accent-green); margin-right: 0.5rem;"></i>{{ f }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set recs = report.get_recommendations() %}
+    {% if recs %}
+    <div class="glass-card">
+        <h3 class="mb-3"><i class="fas fa-lightbulb" style="color: var(--accent-amber);"></i> Recommendations</h3>
+        {% for r in recs %}
+        <div style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md); margin-bottom: 0.5rem; border-left: 3px solid var(--accent-amber); font-size: 0.875rem;">
+            <i class="fas fa-chevron-right" style="color: var(--accent-amber); margin-right: 0.5rem;"></i>{{ r }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

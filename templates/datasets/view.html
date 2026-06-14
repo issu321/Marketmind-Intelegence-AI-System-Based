@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ dataset.original_filename }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.dataset-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.meta-item {
+    background: var(--bg-glass);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+.meta-item .meta-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.meta-item .meta-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header flex items-center justify-between">
+        <div>
+            <h1>{{ dataset.original_filename }}</h1>
+            <p>Dataset details and preview</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('forecasting') }}" class="glass-btn glass-btn-primary"><i class="fas fa-wand-magic-sparkles"></i> Forecast</a>
+            <a href="{{ url_for('datasets') }}" class="glass-btn"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+    </div>
+
+    <div class="dataset-meta">
+        <div class="meta-item">
+            <div class="meta-label">Rows</div>
+            <div class="meta-value">{{ format_number(dataset.row_count, 0) }}</div>
+        </div>
+        <div class="meta-item">
+            <div class="meta-label">Columns</div>
+            <div class="meta-value">{{ dataset.column_count }}</div>
+        </div>
+        <div class="meta-item">
+            <div class="meta-label">File Type</div>
+            <div class="meta-value">{{ dataset.file_type.upper() }}</div>
+        </div>
+        <div class="meta-item">
+            <div class="meta-label">Quality Score</div>
+            <div class="meta-value" style="color: {{ score_to_color(dataset.data_quality_score) }};">{{ dataset.data_quality_score|round|int }}%</div>
+        </div>
+        <div class="meta-item">
+            <div class="meta-label">Status</div>
+            <div class="meta-value"><span class="badge badge-{{ 'success' if dataset.is_processed else 'warning' }}">{{ dataset.processing_status }}</span></div>
+        </div>
+        <div class="meta-item">
+            <div class="meta-label">Date Column</div>
+            <div class="meta-value">{{ dataset.date_column or 'N/A' }}</div>
+        </div>
+    </div>
+
+    <div class="glass-card">
+        <div class="flex items-center justify-between mb-4">
+            <h3>Data Preview (first 100 rows)</h3>
+            <span style="font-size: 0.875rem; color: var(--text-muted);">{{ row_count }} total rows</span>
+        </div>
+        <div class="data-table-container">
+            {{ table_html|safe }}
+        </div>
+    </div>
+
+    {% if dataset.get_quality_issues() %}
+    <div class="glass-card mt-4">
+        <h3 class="mb-3"><i class="fas fa-exclamation-triangle" style="color: var(--accent-amber);"></i> Quality Issues</h3>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            {% for issue in dataset.get_quality_issues() %}
+            <div class="flex items-center gap-3" style="padding: 0.5rem; background: var(--bg-glass); border-radius: var(--radius-sm);">
+                <i class="fas fa-{{ 'exclamation-circle' if issue.severity == 'critical' else 'exclamation-triangle' if issue.severity == 'warning' else 'info-circle' }}" 
+                   style="color: {{ '#ef4444' if issue.severity == 'critical' else '#f59e0b' if issue.severity == 'warning' else '#3b82f6' }};"></i>
+                <span style="font-size: 0.875rem;"><strong>{{ issue.column }}:</strong> {{ issue.details }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

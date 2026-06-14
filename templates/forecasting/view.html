@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ forecast.name }}{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header flex items-center justify-between">
+        <div>
+            <h1>{{ forecast.name }}</h1>
+            <p>{{ forecast.description }} &middot; {{ forecast.model_used }} &middot; {{ forecast.forecast_horizon }} days</p>
+        </div>
+        <a href="{{ url_for('forecasting') }}" class="glass-btn"><i class="fas fa-arrow-left"></i> Back</a>
+    </div>
+
+    {% set metrics = forecast.get_metrics() %}
+    <div class="grid-4 mb-4">
+        <div class="kpi-card">
+            <div class="kpi-label">MAE</div>
+            <div class="kpi-value">{{ metrics.mae|round(4) if metrics.mae is not none else 'N/A' }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">RMSE</div>
+            <div class="kpi-value">{{ metrics.rmse|round(4) if metrics.rmse is not none else 'N/A' }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">R²</div>
+            <div class="kpi-value">{{ metrics.r2|round(4) if metrics.r2 is not none else 'N/A' }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">MAPE</div>
+            <div class="kpi-value">{{ metrics.mape|round(2) if metrics.mape is not none else 'N/A' }}%</div>
+        </div>
+    </div>
+
+    <div class="glass-card mb-4">
+        <h3 class="mb-3">Forecast Chart</h3>
+        <div id="forecastChart" style="height: 450px;"></div>
+    </div>
+
+    {% if forecast.insights %}
+    <div class="glass-card">
+        <h3 class="mb-3"><i class="fas fa-lightbulb" style="color: var(--accent-amber);"></i> AI Insights</h3>
+        {% for line in forecast.insights.split('\n') %}
+        {% if line.strip() %}
+        <div class="insight-item">
+            <i class="fas fa-chevron-right" style="color: var(--accent-blue); margin-right: 0.5rem; font-size: 0.75rem;"></i>
+            {{ line }}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(async function() {
+    const chartDiv = document.getElementById('forecastChart');
+    try {
+        const res = await fetch('/forecasting/{{ forecast.id }}/chart');
+        const data = await res.json();
+        
+        if (data.success === false) {
+            chartDiv.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:0.5rem;display:block;"></i>Error loading chart: ' + (data.error || 'Unknown error') + '</div>';
+            return;
+        }
+        
+        if (data.data && data.layout) {
+            data.layout.template = 'plotly_dark';
+            data.layout.paper_bgcolor = 'transparent';
+            data.layout.plot_bgcolor = 'transparent';
+            data.layout.margin = { t: 30, r: 20, b: 50, l: 60 };
+            data.layout.xaxis = Object.assign({}, data.layout.xaxis, { 
+                gridcolor: 'rgba(255,255,255,0.1)', 
+                linecolor: 'rgba(255,255,255,0.2)',
+                tickfont: { color: '#94a3b8' }
+            });
+            data.layout.yaxis = Object.assign({}, data.layout.yaxis, { 
+                gridcolor: 'rgba(255,255,255,0.1)', 
+                linecolor: 'rgba(255,255,255,0.2)',
+                tickfont: { color: '#94a3b8' }
+            });
+            Plotly.newPlot('forecastChart', data.data, data.layout, {responsive: true});
+        } else {
+            chartDiv.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">No chart data available</div>';
+        }
+    } catch(e) {
+        console.error('Chart error:', e);
+        chartDiv.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:0.5rem;display:block;"></i>Failed to load chart. Please try again.</div>';
+    }
+})();
+</script>
+{% endblock %}

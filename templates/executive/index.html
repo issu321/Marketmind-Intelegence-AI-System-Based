@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Executive Command Center{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-crown" style="color: var(--accent-amber);"></i> Executive Command Center</h1>
+        <p>Unified strategic intelligence dashboard</p>
+    </div>
+
+    <!-- Health Scores -->
+    {% if summary.get('overall_health') %}
+    <div class="grid-3 mb-4">
+        {% for name, score in summary['overall_health'].items() %}
+        <div class="glass-card" style="border-left: 4px solid {{ score_to_color(score) }};">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase;">{{ name.replace('_', ' ') }}</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: {{ score_to_color(score) }};">{{ score|round|int }}</div>
+                </div>
+                <div class="score-circle" style="--accent-color: {{ score_to_color(score) }}; --score: {{ score }};">
+                    <span>{{ score|round|int }}</span>
+                </div>
+            </div>
+            <div class="progress-bar-container mt-3">
+                <div class="progress-bar-fill" style="width: {{ score }}%; background: {{ score_to_color(score) }};"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="glass-card mb-4 text-center" style="padding: 3rem;">
+        <i class="fas fa-chart-line" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+        <h3 style="color: var(--text-secondary);">No Executive Data Yet</h3>
+        <p style="color: var(--text-muted);">Run forecasts, competitor analyses, and consumer analyses to populate this dashboard.</p>
+    </div>
+    {% endif %}
+
+    <!-- Sections Summary -->
+    {% if summary.get('sections') %}
+    <div class="grid-2 mb-4">
+        {% if summary['sections'].get('forecast') %}
+        <div class="glass-card">
+            <h3 class="mb-3"><i class="fas fa-wand-magic-sparkles" style="color: var(--accent-blue);"></i> Forecast Summary</h3>
+            <div style="font-size: 0.875rem;">
+                <div class="flex items-center justify-between" style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                    <span>Model</span><strong>{{ summary['sections']['forecast'].get('model_used', 'N/A') }}</strong>
+                </div>
+                <div class="flex items-center justify-between" style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                    <span>Growth Projection</span><strong style="color: {{ 'var(--accent-green)' if (summary['sections']['forecast'].get('growth_projection', 0) > 0) else 'var(--accent-red)' }}">{{ summary['sections']['forecast'].get('growth_projection', 0)|round(1) }}%</strong>
+                </div>
+                <div class="flex items-center justify-between" style="padding: 0.5rem 0;">
+                    <span>Trend</span><span class="badge badge-{{ 'success' if summary['sections']['forecast'].get('prediction_trend') == 'increasing' else 'danger' if summary['sections']['forecast'].get('prediction_trend') == 'decreasing' else 'info' }}">{{ summary['sections']['forecast'].get('prediction_trend', 'unknown').title() }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if summary['sections'].get('consumer') %}
+        <div class="glass-card">
+            <h3 class="mb-3"><i class="fas fa-users" style="color: var(--accent-green);"></i> Consumer Summary</h3>
+            <div style="font-size: 0.875rem;">
+                <div class="flex items-center justify-between" style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                    <span>Positive Sentiment</span><strong style="color: var(--accent-green);">{{ summary['sections']['consumer'].get('sentiment_positive', 0)|round|int }}%</strong>
+                </div>
+                <div class="flex items-center justify-between" style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                    <span>Brand Health</span><strong style="color: {{ score_to_color(summary['sections']['consumer'].get('brand_health', 50)) }}">{{ summary['sections']['consumer'].get('brand_health', 0)|round|int }}</strong>
+                </div>
+                <div class="flex items-center justify-between" style="padding: 0.5rem 0;">
+                    <span>Trust Score</span><strong style="color: {{ score_to_color(summary['sections']['consumer'].get('trust_score', 50)) }}">{{ summary['sections']['consumer'].get('trust_score', 0)|round|int }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    {% if summary.get('recommendations') %}
+    <div class="glass-card">
+        <h3 class="mb-3"><i class="fas fa-lightbulb" style="color: var(--accent-amber);"></i> Strategic Recommendations</h3>
+        {% for rec in summary['recommendations'] %}
+        <div style="padding: 0.875rem; background: var(--bg-glass); border-radius: var(--radius-md); margin-bottom: 0.5rem; border-left: 3px solid var(--accent-amber); font-size: 0.875rem;">
+            <i class="fas fa-chevron-right" style="color: var(--accent-amber); margin-right: 0.5rem;"></i>{{ rec }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

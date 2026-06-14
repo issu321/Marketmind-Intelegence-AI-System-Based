@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin - Datasets{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header flex items-center justify-between">
+        <div><h1>Datasets</h1><p>All user datasets</p></div>
+        <a href="{{ url_for('admin_dashboard') }}" class="glass-btn"><i class="fas fa-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="glass-card">
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>User</th><th>Filename</th><th>Rows</th><th>Cols</th><th>Quality</th><th>Status</th><th>Uploaded</th></tr>
+                </thead>
+                <tbody>
+                    {% for d in datasets %}
+                    <tr>
+                        <td>{{ d.id }}</td>
+                        <td style="font-size: 0.875rem;">{{ d.user.username if d.user else 'N/A' }}</td>
+                        <td style="font-weight: 500;">{{ d.original_filename }}</td>
+                        <td>{{ format_number(d.row_count, 0) }}</td>
+                        <td>{{ d.column_count }}</td>
+                        <td>
+                            <div class="progress-bar-container" style="width: 50px; display: inline-block; vertical-align: middle;">
+                                <div class="progress-bar-fill" style="width: {{ d.data_quality_score }}%; background: {{ score_to_color(d.data_quality_score) }};"></div>
+                            </div>
+                            <span style="font-size: 0.75rem; margin-left: 0.5rem;">{{ d.data_quality_score|round|int }}%</span>
+                        </td>
+                        <td><span class="badge badge-{{ 'success' if d.is_processed else 'warning' }}">{{ d.processing_status }}</span></td>
+                        <td style="font-size: 0.75rem;">{{ time_ago(d.created_at) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

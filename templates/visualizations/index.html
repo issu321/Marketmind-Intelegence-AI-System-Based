@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+
+{% block title %}Visualizations{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-area" style="color: var(--accent-cyan);"></i> Visualization Center</h1>
+        <p>Create interactive charts with 100% accurate data rendering</p>
+    </div>
+
+    <div class="grid-2">
+        <div class="glass-card" style="max-height: 85vh; overflow-y: auto;">
+            <h3 class="mb-4"><i class="fas fa-sliders-h" style="color: var(--accent-purple);"></i> Chart Configuration</h3>
+            <form id="vizForm">
+                <div class="form-group">
+                    <label class="form-label">Dataset *</label>
+                    <select name="dataset_id" id="vizDataset" class="form-control" required onchange="loadVizColumns()">
+                        <option value="">Select a dataset...</option>
+                        {% for d in datasets %}<option value="{{ d.id }}">{{ d.original_filename }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chart Type</label>
+                    <select name="chart_type" id="chartType" class="form-control" onchange="updateFieldHints()">
+                        <option value="line">Line Chart</option>
+                        <option value="bar">Bar Chart</option>
+                        <option value="scatter">Scatter Plot</option>
+                        <option value="histogram">Histogram</option>
+                        <option value="box">Box Plot</option>
+                        <option value="pie">Pie Chart</option>
+                    </select>
+                    <small id="chartHint" style="color: var(--text-muted); display: block; margin-top: 4px;">
+                        <i class="fas fa-info-circle"></i> Line: Best for trends over time
+                    </small>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">X Axis *</label>
+                        <select name="x_column" id="vizX" class="form-control" required><option value="">Select...</option></select>
+                        <small id="xHint" style="color: var(--text-muted);"></small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Y Axis *</label>
+                        <select name="y_column" id="vizY" class="form-control" required><option value="">Select...</option></select>
+                        <small id="yHint" style="color: var(--text-muted);"></small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color / Group (optional)</label>
+                    <select name="color_column" id="vizColor" class="form-control"><option value="">None</option></select>
+                    <small style="color: var(--text-muted);">Groups data by this column</small>
+                </div>
+                <button type="submit" class="glass-btn glass-btn-primary w-full">
+                    <i class="fas fa-chart-line"></i> Generate Chart
+                </button>
+            </form>
+
+            <div class="section-divider"></div>
+
+            <h4 class="mb-3"><i class="fas fa-fire" style="color: var(--accent-red);"></i> Correlation Heatmap</h4>
+            <form id="heatmapForm">
+                <div class="form-group">
+                    <label class="form-label">Dataset</label>
+                    <select name="dataset_id" id="heatDataset" class="form-control" required>
+                        <option value="">Select a dataset...</option>
+                        {% for d in datasets %}<option value="{{ d.id }}">{{ d.original_filename }}</option>{% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="glass-btn w-full">
+                    <i class="fas fa-th"></i> Generate Heatmap
+                </button>
+            </form>
+        </div>
+
+        <div class="glass-card" style="min-height: 500px;">
+            <h3 class="mb-4"><i class="fas fa-chart-area" style="color: var(--accent-cyan);"></i> Chart Output</h3>
+            <div id="vizLoading" style="display: none; text-align: center; padding: 3rem;">
+                <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                <p style="color: var(--text-secondary);">Generating visualization...</p>
+                <p id="vizLoadingDetail" style="color: var(--text-muted); font-size: 0.85rem;"></p>
+            </div>
+            <div id="vizEmpty" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                <i class="fas fa-chart-pie" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p>Select a dataset and configure your chart to see the visualization</p>
+            </div>
+            <div id="vizError" style="display: none; text-align: center; padding: 2rem;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2.5rem; color: var(--accent-red); margin-bottom: 1rem;"></i>
+                <p id="vizErrorMsg" style="color: var(--accent-red); font-weight: 500;"></p>
+                <p id="vizErrorDetail" style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;"></p>
+            </div>
+            <div id="vizInfo" style="display: none; padding: 0.75rem 1rem; background: rgba(59, 130, 246, 0.1); border-left: 3px solid var(--accent-blue); border-radius: 6px; margin-bottom: 1rem;">
+                <i class="fas fa-info-circle" style="color: var(--accent-blue);"></i>
+                <span id="vizInfoText" style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 0.5rem;"></span>
+            </div>
+            <div id="vizOutput" style="display: none; width: 100%; min-height: 400px;"></div>
+            <div id="vizStats" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted);">
+                    <span><i class="fas fa-database"></i> <span id="statRows"></span> rows</span>
+                    <span><i class="fas fa-columns"></i> <span id="statCols"></span> columns</span>
+                    <span><i class="fas fa-chart-bar"></i> <span id="statType"></span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const chartHints = {
+    line: { hint: "Line: Best for trends over time", x: "Date or sequential column", y: "Numeric value to plot" },
+    bar: { hint: "Bar: Compare values across categories", x: "Category column", y: "Numeric value to compare" },
+    scatter: { hint: "Scatter: Show relationship between two variables", x: "Numeric or category", y: "Numeric value" },
+    histogram: { hint: "Histogram: Show distribution of a single variable", x: "Not used", y: "Numeric column to analyze" },
+    box: { hint: "Box Plot: Show distribution and outliers", x: "Category column", y: "Numeric value" },
+    pie: { hint: "Pie: Show proportions of a whole", x: "Category column", y: "Numeric value (will be summed)" }
+};
+
+function updateFieldHints() {
+    const type = document.getElementById("chartType").value;
+    const info = chartHints[type];
+    if (info) {
+        document.getElementById("chartHint").innerHTML = "<i class='fas fa-info-circle'></i> " + info.hint;
+        document.getElementById("xHint").textContent = info.x;
+        document.getElementById("yHint").textContent = info.y;
+    }
+}
+updateFieldHints();
+
+async function loadVizColumns() {
+    const dsId = document.getElementById("vizDataset").value;
+    if (!dsId) { resetColumnSelects(); return; }
+    try {
+        const res = await fetch("/api/datasets/" + dsId + "/columns");
+        const data = await res.json();
+        if (!data.columns || data.columns.length === 0) {
+            showError("No columns found in dataset.");
+            return;
+        }
+        const selects = { vizX: "<option value=''>Select...</option>", vizY: "<option value=''>Select...</option>", vizColor: "<option value=''>None</option>" };
+        data.columns.forEach(col => {
+            const type = (data.types && data.types[col]) ? data.types[col] : "unknown";
+            const label = col + " (" + type + ")";
+            selects.vizX += "<option value='" + col + "'>" + label + "</option>";
+            selects.vizY += "<option value='" + col + "'>" + label + "</option>";
+            selects.vizColor += "<option value='" + col + "'>" + label + "</option>";
+        });
+        document.getElementById("vizX").innerHTML = selects.vizX;
+        document.getElementById("vizY").innerHTML = selects.vizY;
+        document.getElementById("vizColor").innerHTML = selects.vizColor;
+        if (data.types) {
+            for (const [col, type] of Object.entries(data.types)) {
+                if (type === "date" && !document.getElementById("vizX").value) document.getElementById("vizX").value = col;
+                if (type === "value" && !document.getElementById("vizY").value) document.getElementById("vizY").value = col;
+            }
+        }
+    } catch (err) { showError("Failed to load columns: " + err.message); }
+}
+
+function resetColumnSelects() {
+    document.getElementById("vizX").innerHTML = "<option value=''>Select...</option>";
+    document.getElementById("vizY").innerHTML = "<option value=''>Select...</option>";
+    document.getElementById("vizColor").innerHTML = "<option value=''>None</option>";
+}
+
+function showLoading(detail) {
+    document.getElementById("vizLoading").style.display = "block";
+    document.getElementById("vizEmpty").style.display = "none";
+    document.getElementById("vizError").style.display = "none";
+    document.getElementById("vizInfo").style.display = "none";
+    document.getElementById("vizOutput").style.display = "none";
+    document.getElementById("vizStats").style.display = "none";
+    if (detail) document.getElementById("vizLoadingDetail").textContent = detail;
+}
+
+function showError(msg, detail) {
+    document.getElementById("vizLoading").style.display = "none";
+    document.getElementById("vizEmpty").style.display = "none";
+    document.getElementById("vizError").style.display = "block";
+    document.getElementById("vizInfo").style.display = "none";
+    document.getElementById("vizOutput").style.display = "none";
+    document.getElementById("vizStats").style.display = "none";
+    document.getElementById("vizErrorMsg").textContent = msg || "An error occurred";
+    document.getElementById("vizErrorDetail").textContent = detail || "";
+}
+
+function showInfo(text) {
+    const el = document.getElementById("vizInfo");
+    if (text) { el.style.display = "block"; document.getElementById("vizInfoText").textContent = text; }
+    else el.style.display = "none";
+}
+
+function showChart() {
+    document.getElementById("vizLoading").style.display = "none";
+    document.getElementById("vizEmpty").style.display = "none";
+    document.getElementById("vizError").style.display = "none";
+    document.getElementById("vizOutput").style.display = "block";
+    document.getElementById("vizStats").style.display = "block";
+}
+
+document.getElementById("vizForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const dsId = formData.get("dataset_id");
+    const xCol = formData.get("x_column");
+    const yCol = formData.get("y_column");
+    const chartType = formData.get("chart_type");
+    if (!dsId || !xCol || !yCol) { showError("Please select Dataset, X Axis, and Y Axis."); return; }
+    showLoading("Processing " + chartType + " chart with " + xCol + " vs " + yCol + "...");
+    try {
+        const res = await fetch("/visualizations/generate", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.success && data.chart) {
+            renderChart(data.chart, chartType);
+            if (data.info) showInfo(data.info); else showInfo(null);
+        } else {
+            showError(data.error || "Chart generation failed", "Check your column selections and ensure the dataset contains valid data.");
+        }
+    } catch (err) { showError("Network error: " + err.message); }
+});
+
+document.getElementById("heatmapForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const dsId = document.getElementById("heatDataset").value;
+    if (!dsId) { showError("Please select a dataset for the heatmap."); return; }
+    showLoading("Generating correlation heatmap...");
+    try {
+        const res = await fetch("/api/chart/correlation/" + dsId);
+        const data = await res.json();
+        if (data.success && data.chart) { renderChart(data.chart, "heatmap"); showInfo(null); }
+        else { showError(data.error || "Heatmap generation failed", "Ensure the dataset has at least 2 numeric columns."); }
+    } catch (err) { showError("Network error: " + err.message); }
+});
+
+function renderChart(chartData, chartType) {
+    showChart();
+    const container = document.getElementById("vizOutput");
+    container.style.width = "100%";
+    container.style.minHeight = "400px";
+    if (!chartData.data || !Array.isArray(chartData.data) || chartData.data.length === 0) {
+        showError("Chart data is empty", "Try different columns.");
+        return;
+    }
+    const safeData = JSON.parse(JSON.stringify(chartData.data));
+    let safeLayout = chartData.layout ? JSON.parse(JSON.stringify(chartData.layout)) : {};
+    safeLayout.paper_bgcolor = safeLayout.paper_bgcolor || "rgba(0,0,0,0)";
+    safeLayout.plot_bgcolor = safeLayout.plot_bgcolor || "rgba(30,30,50,0.5)";
+    safeLayout.font = safeLayout.font || { color: "#e2e8f0" };
+    safeLayout.autosize = true;
+    safeLayout.margin = safeLayout.margin || { l: 60, r: 30, t: 80, b: 60 };
+    if (!safeLayout.height) safeLayout.height = 500;
+    const config = { responsive: true, displayModeBar: true, displaylogo: false, modeBarButtonsToRemove: ["lasso2d", "select2d"] };
+    setTimeout(() => {
+        try {
+            if (container.data && container.data.length > 0) Plotly.purge(container);
+            Plotly.newPlot(container, safeData, safeLayout, config);
+            document.getElementById("statType").textContent = chartType.charAt(0).toUpperCase() + chartType.slice(1) + " Chart";
+            document.getElementById("statCols").textContent = safeData[0].x ? safeData[0].x.length : "N/A";
+            document.getElementById("statRows").textContent = safeData.length;
+        } catch (renderErr) {
+            console.error("Plotly render error:", renderErr);
+            showError("Chart rendering failed", renderErr.message);
+        }
+    }, 50);
+}
+
+window.addEventListener("resize", function() {
+    const container = document.getElementById("vizOutput");
+    if (container && container.data && container.data.length > 0) Plotly.Plots.resize(container);
+});
+</script>
+{% endblock %}

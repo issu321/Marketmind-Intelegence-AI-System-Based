@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Database{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header flex items-center justify-between">
+        <div><h1>Database Center</h1><p>Database administration and health</p></div>
+        <a href="{{ url_for('admin_dashboard') }}" class="glass-btn"><i class="fas fa-arrow-left"></i> Back</a>
+    </div>
+
+    <!-- Storage Stats -->
+    <div class="grid-4 mb-4">
+        <div class="kpi-card"><div class="kpi-label">Database Size</div><div class="kpi-value" style="font-size: 1.5rem;">{{ storage.database }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Uploads</div><div class="kpi-value" style="font-size: 1.5rem;">{{ storage.uploads }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Reports</div><div class="kpi-value" style="font-size: 1.5rem;">{{ storage.reports }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Models</div><div class="kpi-value" style="font-size: 1.5rem;">{{ storage.models }}</div></div>
+    </div>
+
+    <!-- Tables -->
+    <div class="glass-card">
+        <h3 class="mb-4">Database Tables</h3>
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Table</th><th>Records</th><th>Columns</th><th>Export</th></tr>
+                </thead>
+                <tbody>
+                    {% for name, info in tables.items() %}
+                    <tr>
+                        <td style="font-weight: 500; text-transform: capitalize;">{{ name.replace('_', ' ') }}</td>
+                        <td>{{ format_number(info.count, 0) }}</td>
+                        <td style="font-size: 0.75rem; color: var(--text-muted);">{{ info.columns|join(', ') }}</td>
+                        <td>
+                            <a href="{{ url_for('admin_export_table', table=name) }}" class="glass-btn glass-btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                <i class="fas fa-download"></i> CSV
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

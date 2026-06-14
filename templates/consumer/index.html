@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Consumer Intelligence{% endblock %}
+
+{% block extra_css %}
+<style>
+.sentiment-bar { display: flex; height: 32px; border-radius: var(--radius-md); overflow: hidden; margin: 1rem 0; }
+.sentiment-pos { background: var(--accent-green); }
+.sentiment-neu { background: var(--accent-amber); }
+.sentiment-neg { background: var(--accent-red); }
+.topic-tag { display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; background: var(--bg-glass); border: 1px solid var(--border-color); border-radius: 9999px; font-size: 0.75rem; margin: 0.25rem; }
+.emotion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.emotion-item { text-align: center; padding: 1rem; background: var(--bg-glass); border-radius: var(--radius-md); }
+.emotion-item .emotion-value { font-size: 1.5rem; font-weight: 700; }
+.emotion-item .emotion-label { font-size: 0.75rem; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header"><h1>Consumer Intelligence</h1><p>Analyze sentiment, brand health, and consumer feedback</p></div>
+
+    <div class="glass-card mb-4">
+        <h3 class="mb-4"><i class="fas fa-sliders-h" style="color: var(--accent-green);"></i> Analysis Configuration</h3>
+        <form id="consumerForm">
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Dataset *</label>
+                    <select name="dataset_id" id="consDataset" class="form-control" required onchange="loadConsColumns()">
+                        <option value="">Select...</option>
+                        {% for d in datasets %}<option value="{{ d.id }}">{{ d.original_filename }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Text Column *</label>
+                    <select name="text_column" id="consText" class="form-control" required><option value="">Select...</option></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rating Column (optional)</label>
+                    <select name="rating_column" id="consRating" class="form-control"><option value="">None</option></select>
+                </div>
+            </div>
+            <button type="submit" class="glass-btn glass-btn-primary mt-3"><i class="fas fa-play"></i> Analyze Sentiment</button>
+        </form>
+    </div>
+
+    <div id="consumerResults"></div>
+
+    {% if insights %}
+    <div class="section-divider"></div>
+    <h2 class="mb-4">Previous Analyses</h2>
+    <div class="grid-auto">
+        {% for i in insights[:8] %}
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-3">
+                <span class="badge badge-info">{{ i.insight_type }}</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">{{ time_ago(i.created_at) }}</span>
+            </div>
+            <div class="grid-3" style="gap: 0.5rem; margin-bottom: 1rem;">
+                <div class="text-center"><div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-green);">{{ i.positive_score|round|int }}%</div><div style="font-size: 0.75rem; color: var(--text-muted);">Positive</div></div>
+                <div class="text-center"><div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-amber);">{{ i.neutral_score|round|int }}%</div><div style="font-size: 0.75rem; color: var(--text-muted);">Neutral</div></div>
+                <div class="text-center"><div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-red);">{{ i.negative_score|round|int }}%</div><div style="font-size: 0.75rem; color: var(--text-muted);">Negative</div></div>
+            </div>
+            <div class="flex items-center justify-between" style="font-size: 0.875rem;">
+                <span>Brand Health: <strong style="color: {{ score_to_color(i.brand_health_score) }};">{{ i.brand_health_score|round|int }}</strong></span>
+                <span>Trust: <strong style="color: {{ score_to_color(i.trust_score) }};">{{ i.trust_score|round|int }}</strong></span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+async function loadConsColumns() {
+    const ds = document.getElementById('consDataset').value;
+    if (!ds) return;
+    const res = await fetch('/api/datasets/' + ds + '/columns');
+    const data = await res.json();
+    ['consText', 'consRating'].forEach(id => document.getElementById(id).innerHTML = id === 'consRating' ? '<option value="">None</option>' : '<option value="">Select...</option>');
+    if (data.columns) {
+        data.columns.forEach(col => {
+            const type = data.types ? data.types[col] : '';
+            const opt = `<option value="${col}">${col} ${type ? '(' + type + ')' : ''}</option>`;
+            document.getElementById('consText').innerHTML += opt;
+            if (type === 'value' || type === 'numeric') document.getElementById('consRating').innerHTML += opt;
+        });
+    }
+}
+
+document.getElementById('consumerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const res = await fetch('/consumer/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+    
+    const container = document.getElementById('consumerResults');
+    if (data.success) {
+        const sd = data.sentiment_distribution || {};
+        container.innerHTML = `
+        <div class="section-divider"></div><h2 class="mb-4">Analysis Results</h2>
+        <div class="grid-4 mb-4">
+            <div class="kpi-card"><div class="kpi-label">Positive</div><div class="kpi-value" style="color: var(--accent-green);">${(sd.positive || 0).toFixed(1)}%</div></div>
+            <div class="kpi-card"><div class="kpi-label">Neutral</div><div class="kpi-value" style="color: var(--accent-amber);">${(sd.neutral || 0).toFixed(1)}%</div></div>
+            <div class="kpi-card"><div class="kpi-label">Negative</div><div class="kpi-value" style="color: var(--accent-red);">${(sd.negative || 0).toFixed(1)}%</div></div>
+            <div class="kpi-card"><div class="kpi-label">Brand Health</div><div class="kpi-value" style="color: ${'{{ score_to_color(0) }}'.replace('0', (data.brand_health_score || 0))};">${(data.brand_health_score || 0).toFixed(1)}</div></div>
+        </div>
+        <div class="grid-2">
+            <div class="glass-card">
+                <h3 class="mb-3">Sentiment Distribution</h3>
+                <div class="sentiment-bar">
+                    <div class="sentiment-pos" style="width: ${sd.positive || 0}%;"></div>
+                    <div class="sentiment-neu" style="width: ${sd.neutral || 0}%;"></div>
+                    <div class="sentiment-neg" style="width: ${sd.negative || 0}%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
+                    <span><i class="fas fa-circle" style="color: var(--accent-green); font-size: 0.5rem;"></i> Positive</span>
+                    <span><i class="fas fa-circle" style="color: var(--accent-amber); font-size: 0.5rem;"></i> Neutral</span>
+                    <span><i class="fas fa-circle" style="color: var(--accent-red); font-size: 0.5rem;"></i> Negative</span>
+                </div>
+                ${data.key_topics && data.key_topics.length ? `<div class="mt-4"><h4 style="font-size: 0.9375rem; margin-bottom: 0.5rem;">Key Topics</h4>${data.key_topics.slice(0, 10).map(t => `<span class="topic-tag">${t.topic} (${t.frequency})</span>`).join('')}</div>` : ''}
+            </div>
+            <div class="glass-card">
+                <h3 class="mb-3">Emotion Breakdown</h3>
+                <div class="emotion-grid">
+                    ${data.emotion_breakdown ? Object.entries(data.emotion_breakdown).map(([k, v]) => `<div class="emotion-item"><div class="emotion-value" style="color: var(--accent-${k === 'joy' || k === 'trust' ? 'green' : k === 'anger' || k === 'fear' ? 'red' : k === 'anticipation' ? 'blue' : 'amber'});">${v.toFixed(1)}</div><div class="emotion-label">${k.charAt(0).toUpperCase() + k.slice(1)}</div></div>`).join('') : '<p style="color: var(--text-muted);">No emotion data</p>'}
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between" style="font-size: 0.875rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span>Trust Score</span><strong style="color: ${'{{ score_to_color(0) }}'.replace('0', data.trust_score || 0)}">${(data.trust_score || 0).toFixed(1)}</strong>
+                    </div>
+                    <div class="flex items-center justify-between" style="font-size: 0.875rem; padding: 0.5rem 0;">
+                        <span>Emotion Score</span><strong>${(data.emotion_score || 0).toFixed(1)}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        ${data.recommendations && data.recommendations.length ? `<div class="glass-card mt-4"><h3 class="mb-3"><i class="fas fa-lightbulb" style="color: var(--accent-amber);"></i> Recommendations</h3>${data.recommendations.map(r => `<div style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md); margin-bottom: 0.5rem; border-left: 3px solid var(--accent-amber); font-size: 0.875rem;">${r}</div>`).join('')}</div>` : ''}`;
+    } else {
+        container.innerHTML = `<div class="glass-card mt-4" style="border-color: var(--accent-red);"><p style="color: var(--accent-red);"><i class="fas fa-exclamation-circle"></i> ${data.error || 'Analysis failed'}</p></div>`;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Scenario Simulation{% endblock %}
+
+{% block extra_css %}
+<style>
+.scenario-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.scenario-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; cursor: pointer; transition: var(--transition); text-align: center; }
+.scenario-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); box-shadow: var(--shadow-glow); }
+.scenario-card.selected { border-color: var(--accent-blue); background: rgba(59,130,246,0.1); }
+.scenario-card i { font-size: 1.5rem; margin-bottom: 0.75rem; color: var(--accent-blue); }
+.scenario-card h4 { font-size: 0.875rem; font-weight: 600; }
+.impact-badge { display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600; }
+.impact-positive { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+.impact-negative { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+.comparison-chart { height: 400px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header"><h1>Scenario Simulation Lab</h1><p>Simulate business scenarios and measure impact</p></div>
+
+    <div class="glass-card mb-4">
+        <h3 class="mb-4">Select Scenario</h3>
+        <div class="scenario-grid" id="scenarioGrid">
+            {% for key, scenario in available_scenarios.items() %}
+            <div class="scenario-card" data-scenario="{{ key }}" onclick="selectScenario(this, '{{ key }}')">
+                <i class="fas fa-{{ 'tag' if 'price' in key else 'bullhorn' if 'marketing' in key else 'chart-line' if 'demand' in key else 'user-slash' if 'competitor' in key else 'rocket' if 'product' in key else 'cog' }}"></i>
+                <h4>{{ scenario.description }}</h4>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Default: {{ scenario.default_value }}%</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <form id="simForm">
+        <input type="hidden" name="scenario_type" id="scenarioType" required>
+        <div class="grid-2">
+            <div class="glass-card">
+                <h3 class="mb-4"><i class="fas fa-sliders-h" style="color: var(--accent-pink);"></i> Configuration</h3>
+                <div class="form-group">
+                    <label class="form-label">Dataset *</label>
+                    <select name="dataset_id" id="simDataset" class="form-control" required onchange="loadSimColumns()">
+                        <option value="">Select...</option>
+                        {% for d in datasets %}<option value="{{ d.id }}">{{ d.original_filename }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Value Column *</label>
+                        <select name="value_column" id="simValue" class="form-control" required><option value="">Select...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date Column *</label>
+                        <select name="date_column" id="simDate" class="form-control" required><option value="">Select...</option></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Impact Percentage (%)</label>
+                    <input type="number" name="impact_percentage" class="form-control" value="10" step="1" min="-100" max="100">
+                </div>
+                <button type="submit" class="glass-btn glass-btn-primary w-full" id="simBtn" disabled><i class="fas fa-play"></i> Run Simulation</button>
+            </div>
+            <div class="glass-card">
+                <h3 class="mb-4"><i class="fas fa-chart-bar" style="color: var(--accent-cyan);"></i> Results</h3>
+                <div id="simLoading" style="display: none; text-align: center; padding: 3rem;"><div class="spinner" style="margin: 0 auto 1rem;"></div><p style="color: var(--text-secondary);">Running simulation...</p></div>
+                <div id="simEmpty" style="text-align: center; padding: 3rem; color: var(--text-muted);"><i class="fas fa-flask" style="font-size: 3rem; margin-bottom: 1rem;"></i><p>Select a scenario and configure to see results</p></div>
+                <div id="simResults" style="display: none;">
+                    <div id="simMetrics" style="margin-bottom: 1rem;"></div>
+                    <div id="simComparison" class="comparison-chart"></div>
+                    <div id="simRecs" style="margin-top: 1rem;"></div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if scenarios %}
+    <div class="glass-card mt-4">
+        <h3 class="mb-3">Recent Simulations</h3>
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead><tr><th>Name</th><th>Type</th><th>Created</th></tr></thead>
+                <tbody>
+                    {% for s in scenarios[:10] %}
+                    <tr><td>{{ s.name }}</td><td><span class="badge badge-info">{{ s.scenario_type }}</span></td><td style="font-size: 0.75rem;">{{ time_ago(s.created_at) }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function selectScenario(el, type) {
+    document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('scenarioType').value = type;
+    document.getElementById('simBtn').disabled = !document.getElementById('simDataset').value;
+}
+
+async function loadSimColumns() {
+    const ds = document.getElementById('simDataset').value;
+    const hasScenario = !!document.getElementById('scenarioType').value;
+    document.getElementById('simBtn').disabled = !(ds && hasScenario);
+    if (!ds) return;
+    const res = await fetch('/api/datasets/' + ds + '/columns');
+    const data = await res.json();
+    ['simValue', 'simDate'].forEach(id => document.getElementById(id).innerHTML = '<option value="">Select...</option>');
+    if (data.columns) {
+        data.columns.forEach(col => {
+            const type = data.types ? data.types[col] : '';
+            const opt = `<option value="${col}">${col} ${type ? '(' + type + ')' : ''}</option>`;
+            if (type === 'date') document.getElementById('simDate').innerHTML += opt;
+            else if (type === 'value' || type === 'numeric') document.getElementById('simValue').innerHTML += opt;
+            else {
+                document.getElementById('simDate').innerHTML += opt;
+                document.getElementById('simValue').innerHTML += opt;
+            }
+        });
+    }
+}
+
+document.getElementById('simForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    document.getElementById('simLoading').style.display = 'block';
+    document.getElementById('simEmpty').style.display = 'none';
+    document.getElementById('simResults').style.display = 'none';
+    
+    const formData = new FormData(this);
+    const res = await fetch('/simulation/run', { method: 'POST', body: formData });
+    const data = await res.json();
+    
+    document.getElementById('simLoading').style.display = 'none';
+    if (data.success) {
+        document.getElementById('simResults').style.display = 'block';
+        const impact = data.impact_analysis || {};
+        document.getElementById('simMetrics').innerHTML = `
+            <div class="grid-3" style="gap: 0.75rem;">
+                <div style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Revenue Impact</div>
+                    <div class="impact-badge ${impact.direction === 'positive' ? 'impact-positive' : impact.direction === 'negative' ? 'impact-negative' : ''}" style="margin-top: 0.25rem;">${impact.revenue_impact !== undefined ? (impact.revenue_impact >= 0 ? '+' : '') + impact.revenue_impact.toFixed(2) : 'N/A'}</div>
+                </div>
+                <div style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Change %</div>
+                    <div style="font-weight: 700; color: ${impact.direction === 'positive' ? 'var(--accent-green)' : impact.direction === 'negative' ? 'var(--accent-red)' : 'var(--text-primary)'}; margin-top: 0.25rem;">${impact.revenue_impact_percentage !== undefined ? impact.revenue_impact_percentage.toFixed(2) : 'N/A'}%</div>
+                </div>
+                <div style="padding: 0.75rem; background: var(--bg-glass); border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Severity</div>
+                    <div style="font-weight: 700; margin-top: 0.25rem; text-transform: uppercase; font-size: 0.75rem;">${impact.severity || 'N/A'}</div>
+                </div>
+            </div>`;
+        
+        const comp = data.comparison_data || {};
+        if (comp.dates && comp.baseline && comp.simulated) {
+            Plotly.newPlot('simComparison', [
+                { x: comp.dates, y: comp.baseline, type: 'scatter', mode: 'lines', name: 'Baseline', line: { color: '#94a3b8' } },
+                { x: comp.dates, y: comp.simulated, type: 'scatter', mode: 'lines', name: 'Simulated', line: { color: '#3b82f6' } }
+            ], { template: 'plotly_dark', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', margin: { t: 30, r: 20, b: 40, l: 50 } }, { responsive: true });
+        }
+        
+        if (data.recommendations) {
+            document.getElementById('simRecs').innerHTML = '<h4 style="margin-bottom: 0.5rem;"><i class="fas fa-lightbulb" style="color: var(--accent-amber);"></i> Recommendations</h4>' +
+                data.recommendations.map(r => `<div style="padding: 0.5rem; background: var(--bg-glass); border-radius: var(--radius-sm); margin-bottom: 0.375rem; font-size: 0.875rem; border-left: 3px solid var(--accent-amber);">${r}</div>`).join('');
+        }
+    } else {
+        document.getElementById('simEmpty').style.display = 'block';
+        alert(data.error || 'Simulation failed');
+    }
+});
+</script>
+{% endblock %}

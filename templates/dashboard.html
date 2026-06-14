@@ -1,0 +1,350 @@
+<style>
+
+/* ==========================================
+   DEVELOPER BRANDING SECTION
+========================================== */
+.branding-links{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+    margin-top:35px;
+    max-width:850px;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.brand-link{
+    position:relative;
+    overflow:hidden;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+
+    min-height:72px;
+
+    text-decoration:none;
+    color:white;
+
+    font-size:1rem;
+    font-weight:600;
+
+    border-radius:18px;
+
+    background:rgba(255,255,255,0.04);
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    backdrop-filter:blur(18px);
+
+    transition:all .35s ease;
+}
+
+.brand-link::before{
+    content:'';
+    position:absolute;
+    inset:0;
+
+    background:linear-gradient(
+        135deg,
+        rgba(59,130,246,.18),
+        rgba(139,92,246,.18)
+    );
+
+    opacity:0;
+    transition:.35s;
+}
+
+.brand-link:hover{
+    transform:translateY(-6px);
+
+    border-color:rgba(59,130,246,.5);
+
+    box-shadow:
+        0 0 30px rgba(59,130,246,.25),
+        0 0 60px rgba(139,92,246,.12);
+}
+
+.brand-link:hover::before{
+    opacity:1;
+}
+
+.brand-link i,
+.brand-link span{
+    position:relative;
+    z-index:2;
+}
+
+.brand-link i{
+    font-size:1.2rem;
+}
+
+.brand-link:hover i{
+    transform:scale(1.15);
+    transition:.3s;
+}
+.branding-section{
+    max-width:950px;
+    margin:auto;
+    padding:3.5rem;
+
+    border-radius:30px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(15,23,42,.95),
+            rgba(30,41,59,.85)
+        );
+
+    border:1px solid rgba(255,255,255,.08);
+
+    box-shadow:
+        0 20px 60px rgba(0,0,0,.35),
+        0 0 80px rgba(59,130,246,.08);
+}
+</style>
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>Dashboard</h1>
+        <p>Welcome back, {{ current_user.full_name }}. Here's your intelligence overview.</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid-4 mb-4">
+        <div class="kpi-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="kpi-value">{{ stats.datasets }}</div>
+                    <div class="kpi-label">Datasets</div>
+                </div>
+                <div class="feature-icon blue"><i class="fas fa-database"></i></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="kpi-value">{{ stats.forecasts }}</div>
+                    <div class="kpi-label">Forecasts</div>
+                </div>
+                <div class="feature-icon purple"><i class="fas fa-wand-magic-sparkles"></i></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="kpi-value">{{ stats.analyses }}</div>
+                    <div class="kpi-label">Analyses</div>
+                </div>
+                <div class="feature-icon green"><i class="fas fa-chess-knight"></i></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="kpi-value">{{ stats.reports }}</div>
+                    <div class="kpi-label">Reports</div>
+                </div>
+                <div class="feature-icon amber"><i class="fas fa-file-lines"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid-2">
+        <!-- Recent Datasets -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-4">
+                <h3><i class="fas fa-database text-blue-500"></i> Recent Datasets</h3>
+                <a href="{{ url_for('datasets') }}" class="glass-btn" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                    View All <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            {% if datasets %}
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Rows</th>
+                            <th>Quality</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in datasets %}
+                        <tr>
+                            <td><a href="{{ url_for('view_dataset', dataset_id=d.id) }}" style="color: var(--accent-blue); text-decoration: none;">{{ d.original_filename }}</a></td>
+                            <td>{{ format_number(d.row_count, 0) }}</td>
+                            <td>
+                                <div class="progress-bar-container" style="width: 60px;">
+                                    <div class="progress-bar-fill" style="width: {{ d.data_quality_score }}%; background: {{ score_to_color(d.data_quality_score) }};"></div>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-{{ 'success' if d.is_processed else 'warning' }}">{{ 'Ready' if d.is_processed else 'Pending' }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center" style="padding: 2rem; color: var(--text-muted);">
+                <i class="fas fa-upload" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                <p>No datasets yet. <a href="{{ url_for('upload_dataset') }}" style="color: var(--accent-blue);">Upload your first dataset</a>.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Forecasts -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-4">
+                <h3><i class="fas fa-wand-magic-sparkles text-purple-500"></i> Recent Forecasts</h3>
+                <a href="{{ url_for('forecasting') }}" class="glass-btn" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                    View All <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            {% if forecasts %}
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Name</th><th>Model</th><th>Horizon</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for f in forecasts %}
+                        <tr>
+                            <td><a href="{{ url_for('view_forecast', forecast_id=f.id) }}" style="color: var(--accent-blue); text-decoration: none;">{{ f.name }}</a></td>
+                            <td><span class="badge badge-info">{{ f.model_used }}</span></td>
+                            <td>{{ f.forecast_horizon }} days</td>
+                            <td><span class="badge badge-success">Active</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center" style="padding: 2rem; color: var(--text-muted);">
+                <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                <p>No forecasts yet. <a href="{{ url_for('forecasting') }}" style="color: var(--accent-blue);">Run your first forecast</a>.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Actions & Activity -->
+    <div class="grid-2 mt-4">
+        <!-- Quick Actions -->
+        <div class="glass-card">
+            <h3 class="mb-4"><i class="fas fa-bolt text-amber-500"></i> Quick Actions</h3>
+            <div class="grid-2" style="gap: 0.75rem;">
+                <a href="{{ url_for('upload_dataset') }}" class="glass-btn w-full" style="justify-content: flex-start;">
+                    <i class="fas fa-upload" style="color: var(--accent-blue);"></i> Upload Dataset
+                </a>
+                <a href="{{ url_for('forecasting') }}" class="glass-btn w-full" style="justify-content: flex-start;">
+                    <i class="fas fa-wand-magic-sparkles" style="color: var(--accent-purple);"></i> Run Forecast
+                </a>
+                <a href="{{ url_for('competitors') }}" class="glass-btn w-full" style="justify-content: flex-start;">
+                    <i class="fas fa-chess-knight" style="color: var(--accent-green);"></i> Analyze Competitors
+                </a>
+                <a href="{{ url_for('simulation') }}" class="glass-btn w-full" style="justify-content: flex-start;">
+                    <i class="fas fa-flask" style="color: var(--accent-pink);"></i> Simulate Scenario
+                </a>
+                <a href="{{ url_for('visualizations') }}" class="glass-btn w-full" style="justify-content: flex-start;">
+                    <i class="fas fa-chart-pie" style="color: var(--accent-cyan);"></i> Create Visualization
+                </a>
+                <a href="{{ url_for('reports') }}" class="glass-btn w-full" style="justify-content: flex-start;">
+                    <i class="fas fa-file-lines" style="color: var(--accent-amber);"></i> Generate Report
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="glass-card">
+            <h3 class="mb-4"><i class="fas fa-clock text-cyan-500"></i> Recent Activity</h3>
+            {% if activity %}
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                {% for a in activity[:8] %}
+                <div class="flex items-center justify-between" style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                    <div class="flex items-center gap-3">
+                        <div class="feature-icon {{ 'blue' if 'upload' in a.action else 'purple' if 'forecast' in a.action else 'green' if 'analysis' in a.action else 'amber' }}" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                            <i class="fas fa-{{ 'upload' if 'upload' in a.action else 'chart-line' if 'forecast' in a.action else 'search' if 'analysis' in a.action else 'cog' }}"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; font-weight: 500;">{{ a.action.replace('_', ' ').title() }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ a.details[:50] if a.details else '' }}</div>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">{{ time_ago(a.created_at) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No recent activity.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<center>
+    <!-- Footer -->
+<!-- Developer Branding Section -->
+<section class="landing-cta">
+    <div class="cta-card">
+        <h2>Connect With The Developer</h2>
+        <p>
+            MarketMind Intelligence AI System developed and maintained by Mohammed Usman.
+        </p>
+
+        <div class="branding-links">
+
+    <a href="https://github.com/issu321"
+       target="_blank"
+       class="brand-link">
+        <i class="fab fa-github"></i>
+        <span>GitHub Profile</span>
+    </a>
+
+    <a href="https://github.com/issu321/Marketmind-Intelegence-AI-System-Based"
+       target="_blank"
+       class="brand-link">
+        <i class="fas fa-code-branch"></i>
+        <span>Project Repository</span>
+    </a>
+
+    <a href="https://wa.me/918884294749?text=Hello%20I%20found%20your%20website%20and%20would%20like%20to%20know%20more"
+       target="_blank"
+       class="brand-link">
+        <i class="fab fa-whatsapp"></i>
+        <span>WhatsApp</span>
+    </a>
+
+</div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="landing-footer">
+
+
+    <div style="margin-top:20px;">
+        <strong>Developer:</strong> Mohammed Usman
+    </div>
+
+    <div style="margin-top:10px;">
+        <a href="https://github.com/issu321" target="_blank">GitHub</a> |
+        <a href="https://github.com/issu321/Marketmind-Intelegence-AI-System-Based" target="_blank">Repository</a> |
+        <a href="https://t.me/issu_321" target="_blank">Telegram</a> |
+        <a href="https://www.instagram.com/_issu_321?igsh=MTJ0a3F3YWZ4OTQ3eg==" target="_blank">Instagram</a>
+    </div>
+
+    <div style="margin-top:15px;">
+        © 2026 Mohammed Usman. All Rights Reserved.
+    </div>
+
+</footer>
+</center>
+{% endblock %}

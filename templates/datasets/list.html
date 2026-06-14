@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Datasets{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header flex items-center justify-between">
+        <div>
+            <h1>Datasets</h1>
+            <p>Manage your uploaded data files</p>
+        </div>
+        <a href="{{ url_for('upload_dataset') }}" class="glass-btn glass-btn-primary">
+            <i class="fas fa-upload"></i> Upload Dataset
+        </a>
+    </div>
+
+    <div class="glass-card">
+        {% if datasets %}
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Rows</th>
+                        <th>Columns</th>
+                        <th>Quality</th>
+                        <th>Status</th>
+                        <th>Uploaded</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in datasets %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('view_dataset', dataset_id=d.id) }}" style="color: var(--accent-blue); text-decoration: none; font-weight: 500;">
+                                {{ d.original_filename }}
+                            </a>
+                        </td>
+                        <td><span class="badge badge-info">{{ d.file_type.upper() }}</span></td>
+                        <td>{{ format_number(d.row_count, 0) }}</td>
+                        <td>{{ d.column_count }}</td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <div class="progress-bar-container" style="width: 50px;">
+                                    <div class="progress-bar-fill" style="width: {{ d.data_quality_score }}%; background: {{ score_to_color(d.data_quality_score) }};"></div>
+                                </div>
+                                <span style="font-size: 0.75rem;">{{ d.data_quality_score|round|int }}%</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-{{ 'success' if d.is_processed else 'warning' }}">{{ d.processing_status }}</span></td>
+                        <td style="font-size: 0.75rem;">{{ time_ago(d.created_at) }}</td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('view_dataset', dataset_id=d.id) }}" class="glass-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('delete_dataset', dataset_id=d.id) }}" style="display: inline;" onsubmit="return confirm('Delete this dataset? All related forecasts and analyses will be removed.');">
+                                    <button type="submit" class="glass-btn glass-btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pagination.total_pages > 1 %}
+        <div class="flex items-center justify-between mt-4" style="font-size: 0.875rem;">
+            <span style="color: var(--text-muted);">Showing {{ (pagination.page - 1) * pagination.per_page + 1 }} - {{ [pagination.page * pagination.per_page, pagination.total]|min }} of {{ pagination.total }}</span>
+            <div class="flex items-center gap-2">
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('datasets', page=pagination.prev_page) }}" class="glass-btn" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;"><i class="fas fa-chevron-left"></i></a>
+                {% endif %}
+                <span style="color: var(--text-muted);">Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+                {% if pagination.has_next %}
+                <a href="{{ url_for('datasets', page=pagination.next_page) }}" class="glass-btn" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;"><i class="fas fa-chevron-right"></i></a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center" style="padding: 4rem 2rem; color: var(--text-muted);">
+            <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">No Datasets Yet</h3>
+            <p>Upload your first dataset to get started with analysis and forecasting.</p>
+            <a href="{{ url_for('upload_dataset') }}" class="glass-btn glass-btn-primary mt-4">
+                <i class="fas fa-upload"></i> Upload Dataset
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

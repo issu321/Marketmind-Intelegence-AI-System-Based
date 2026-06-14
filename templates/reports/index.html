@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header flex items-center justify-between">
+        <div><h1>Report Center</h1><p>Generate and manage analytics reports</p></div>
+    </div>
+
+    <div class="glass-card mb-4">
+        <h3 class="mb-4"><i class="fas fa-plus-circle" style="color: var(--accent-green);"></i> Generate New Report</h3>
+        <form method="POST" action="{{ url_for('generate_report') }}">
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Report Title</label>
+                    <input type="text" name="title" class="form-control" placeholder="Executive Summary - Q4 2024" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Report Type</label>
+                    <select name="report_type" class="form-control">
+                        <option value="summary">Executive Summary</option>
+                        <option value="forecast">Forecast Report</option>
+                        <option value="competitive">Competitive Analysis</option>
+                        <option value="consumer">Consumer Insights</option>
+                        <option value="opportunity">Opportunity Report</option>
+                        <option value="comprehensive">Comprehensive</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Format</label>
+                    <select name="format" class="form-control">
+                        <option value="html">HTML</option>
+                        <option value="csv">CSV</option>
+                        <option value="json">JSON</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="glass-btn glass-btn-primary"><i class="fas fa-file-alt"></i> Generate Report</button>
+        </form>
+    </div>
+
+    {% if reports %}
+    <div class="glass-card">
+        <h3 class="mb-4">Your Reports</h3>
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Title</th><th>Type</th><th>Format</th><th>Created</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for r in reports %}
+                    <tr>
+                        <td><a href="{{ url_for('view_report', report_id=r.id) }}" style="color: var(--accent-blue); text-decoration: none; font-weight: 500;">{{ r.title }}</a></td>
+                        <td><span class="badge badge-info">{{ r.report_type }}</span></td>
+                        <td><span class="badge badge-{{ 'success' if r.format == 'html' else 'info' }}">{{ r.format.upper() }}</span></td>
+                        <td style="font-size: 0.75rem;">{{ time_ago(r.created_at) }}</td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('view_report', report_id=r.id) }}" class="glass-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="View"><i class="fas fa-eye"></i></a>
+                                <a href="{{ url_for('download_report', report_id=r.id) }}" class="glass-btn glass-btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="Download"><i class="fas fa-download"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="glass-card text-center" style="padding: 4rem;">
+        <i class="fas fa-file-alt" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+        <h3 style="color: var(--text-secondary);">No Reports Yet</h3>
+        <p style="color: var(--text-muted);">Generate your first report to see it here.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

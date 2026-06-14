@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Opportunity Detection{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header"><h1>Opportunity Detection</h1><p>Discover market opportunities with AI-powered analysis</p></div>
+
+    <div class="glass-card mb-4">
+        <h3 class="mb-4"><i class="fas fa-sliders-h" style="color: var(--accent-amber);"></i> Configuration</h3>
+        <form id="oppForm">
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Dataset *</label>
+                    <select name="dataset_id" id="oppDataset" class="form-control" required onchange="loadOppColumns()">
+                        <option value="">Select...</option>
+                        {% for d in datasets %}<option value="{{ d.id }}">{{ d.original_filename }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date Column *</label>
+                    <select name="date_column" id="oppDate" class="form-control" required><option value="">Select...</option></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Value Column *</label>
+                    <select name="value_column" id="oppValue" class="form-control" required><option value="">Select...</option></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category Column (optional)</label>
+                <select name="category_column" id="oppCat" class="form-control"><option value="">None</option></select>
+            </div>
+            <button type="submit" class="glass-btn glass-btn-primary"><i class="fas fa-search"></i> Detect Opportunities</button>
+        </form>
+    </div>
+
+    <div id="oppResults"></div>
+
+    {% if opportunities %}
+    <div class="section-divider"></div>
+    <h2 class="mb-4">Detected Opportunities</h2>
+    <div class="grid-auto">
+        {% for o in opportunities[:12] %}
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-3">
+                <span class="badge badge-{{ 'success' if o.opportunity_score > 70 else 'info' if o.opportunity_score > 40 else 'warning' }}">{{ o.opportunity_type }}</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">{{ time_ago(o.created_at) }}</span>
+            </div>
+            <h4 style="font-weight: 600; margin-bottom: 0.5rem;">{{ o.opportunity_name }}</h4>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">{{ o.description[:100] }}...</p>
+            <div class="flex items-center justify-between" style="font-size: 0.875rem;">
+                <span>Score: <strong style="color: {{ score_to_color(o.opportunity_score) }};">{{ o.opportunity_score|round|int }}</strong></span>
+                <span class="badge badge-{{ 'danger' if o.risk_level == 'high' else 'warning' if o.risk_level == 'medium' else 'success' }}">{{ o.risk_level }} risk</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+async function loadOppColumns() {
+    const ds = document.getElementById('oppDataset').value;
+    if (!ds) return;
+    const res = await fetch('/api/datasets/' + ds + '/columns');
+    const data = await res.json();
+    ['oppDate', 'oppValue', 'oppCat'].forEach(id => document.getElementById(id).innerHTML = id === 'oppCat' ? '<option value="">None</option>' : '<option value="">Select...</option>');
+    if (data.columns) {
+        data.columns.forEach(col => {
+            const type = data.types ? data.types[col] : '';
+            const opt = `<option value="${col}">${col} ${type ? '(' + type + ')' : ''}</option>`;
+            if (type === 'date') document.getElementById('oppDate').innerHTML += opt;
+            else if (type === 'value' || type === 'numeric') document.getElementById('oppValue').innerHTML += opt;
+            else if (type === 'category') document.getElementById('oppCat').innerHTML += opt;
+            else {
+                document.getElementById('oppDate').innerHTML += opt;
+                document.getElementById('oppValue').innerHTML += opt;
+            }
+        });
+    }
+}
+
+document.getElementById('oppForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const res = await fetch('/opportunities/detect', { method: 'POST', body: formData });
+    const data = await res.json();
+    
+    const container = document.getElementById('oppResults');
+    if (data.success && data.opportunities) {
+        const summary = data.summary || {};
+        let html = `<div class="section-divider"></div><h2 class="mb-4">Results</h2>
+        <div class="grid-4 mb-4">
+            <div class="kpi-card"><div class="kpi-label">Total Found</div><div class="kpi-value">${summary.total_count || data.opportunities.length}</div></div>
+            <div class="kpi-card"><div class="kpi-label">High Priority</div><div class="kpi-value" style="color: var(--accent-green);">${summary.high_opportunities || 0}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Avg Score</div><div class="kpi-value">${(summary.avg_opportunity_score || 0).toFixed(1)}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Top Score</div><div class="kpi-value" style="color: var(--accent-purple);">${(summary.max_opportunity_score || 0).toFixed(1)}</div></div>
+        </div>
+        <div class="grid-auto">`;
+        
+        data.opportunities.forEach(o => {
+            html += `<div class="glass-card">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="badge badge-${o.opportunity_score > 70 ? 'success' : o.opportunity_score > 40 ? 'info' : 'warning'}">${o.opportunity_type}</span>
+                    <span class="badge badge-${o.risk_level === 'high' ? 'danger' : o.risk_level === 'medium' ? 'warning' : 'success'}">${o.risk_level} risk</span>
+                </div>
+                <h4 style="font-weight: 600; margin-bottom: 0.5rem;">${o.opportunity_name}</h4>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">${o.description}</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.75rem; margin-bottom: 1rem;">
+                    <div style="padding: 0.5rem; background: var(--bg-glass); border-radius: var(--radius-sm);"><div style="color: var(--text-muted);">Score</div><div style="font-weight: 600; color: ${'{{ score_to_color(0) }}'.replace('0', o.opportunity_score || 0)};">${(o.opportunity_score || 0).toFixed(1)}</div></div>
+                    <div style="padding: 0.5rem; background: var(--bg-glass); border-radius: var(--radius-sm);"><div style="color: var(--text-muted);">Revenue Potential</div><div style="font-weight: 600;">${'{{ format_currency(0) }}'.replace('0.00', (o.revenue_potential || 0).toFixed(2))}</div></div>
+                    <div style="padding: 0.5rem; background: var(--bg-glass); border-radius: var(--radius-sm);"><div style="color: var(--text-muted);">Readiness</div><div style="font-weight: 600;">${(o.market_readiness_score || 0).toFixed(1)}</div></div>
+                    <div style="padding: 0.5rem; background: var(--bg-glass); border-radius: var(--radius-sm);"><div style="color: var(--text-muted);">Growth</div><div style="font-weight: 600;">${(o.growth_rate || 0).toFixed(1)}%</div></div>
+                </div>
+                ${o.recommendations ? `<div style="font-size: 0.75rem; color: var(--text-secondary);"><i class="fas fa-lightbulb" style="color: var(--accent-amber);"></i> ${o.recommendations[0]}</div>` : ''}
+            </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = `<div class="glass-card mt-4" style="border-color: var(--accent-red);"><p style="color: var(--accent-red);"><i class="fas fa-exclamation-circle"></i> ${data.error || 'Detection failed'}</p></div>`;
+    }
+});
+</script>
+{% endblock %}

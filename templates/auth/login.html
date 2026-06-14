@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block extra_css %}
+<style>
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-header .logo-icon {
+    width: 56px;
+    height: 56px;
+    background: var(--gradient-primary);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    margin: 0 auto 1rem;
+}
+
+.auth-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.auth-header p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.auth-form .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.auth-form .form-control {
+    padding: 0.75rem 1rem;
+}
+
+.auth-form .input-icon-wrap {
+    position: relative;
+}
+
+.auth-form .input-icon-wrap i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.auth-form .input-icon-wrap .form-control {
+    padding-left: 2.5rem;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 0.875rem;
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    font-family: var(--font-main);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.auth-btn:hover {
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.auth-footer a {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+.remember-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    font-size: 0.875rem;
+}
+
+.remember-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.remember-check input {
+    accent-color: var(--accent-blue);
+}
+
+.forgot-link {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+
+/* ==========================================
+   DEVELOPER BRANDING SECTION
+========================================== */
+.branding-links{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+    margin-top:35px;
+    max-width:850px;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.brand-link{
+    position:relative;
+    overflow:hidden;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+
+    min-height:72px;
+
+    text-decoration:none;
+    color:white;
+
+    font-size:1rem;
+    font-weight:600;
+
+    border-radius:18px;
+
+    background:rgba(255,255,255,0.04);
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    backdrop-filter:blur(18px);
+
+    transition:all .35s ease;
+}
+
+.brand-link::before{
+    content:'';
+    position:absolute;
+    inset:0;
+
+    background:linear-gradient(
+        135deg,
+        rgba(59,130,246,.18),
+        rgba(139,92,246,.18)
+    );
+
+    opacity:0;
+    transition:.35s;
+}
+
+.brand-link:hover{
+    transform:translateY(-6px);
+
+    border-color:rgba(59,130,246,.5);
+
+    box-shadow:
+        0 0 30px rgba(59,130,246,.25),
+        0 0 60px rgba(139,92,246,.12);
+}
+
+.brand-link:hover::before{
+    opacity:1;
+}
+
+.brand-link i,
+.brand-link span{
+    position:relative;
+    z-index:2;
+}
+
+.brand-link i{
+    font-size:1.2rem;
+}
+
+.brand-link:hover i{
+    transform:scale(1.15);
+    transition:.3s;
+}
+.branding-section{
+    max-width:950px;
+    margin:auto;
+    padding:3.5rem;
+
+    border-radius:30px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(15,23,42,.95),
+            rgba(30,41,59,.85)
+        );
+
+    border:1px solid rgba(255,255,255,.08);
+
+    box-shadow:
+        0 20px 60px rgba(0,0,0,.35),
+        0 0 80px rgba(59,130,246,.08);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<center>
+    <div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="logo-icon">
+                <i class="fas fa-brain"></i>
+            </div>
+            <h1>Welcome Back</h1>
+            <p>Sign in to your MarketMind account</p>
+        </div>
+
+        <form class="auth-form" method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label class="form-label">Username or Email</label>
+                <div class="input-icon-wrap">
+                    <i class="fas fa-user"></i>
+                    <input type="text" name="username" class="form-control" placeholder="Enter username or email" required autofocus>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-icon-wrap">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password" class="form-control" placeholder="Enter password" required>
+                </div>
+            </div>
+
+            <div class="remember-row">
+                <label class="remember-check">
+                    <input type="checkbox" name="remember">
+                    <span>Remember me</span>
+                </label>
+                <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="auth-btn">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{{ url_for('register') }}">Get Started</a></p>
+        </div>
+    </div>
+</div>
+
+</center>
+<center><!-- Footer -->
+<!-- Developer Branding Section -->
+<section class="landing-cta">
+    <div class="cta-card">
+        <h2>Any Login issue??? <br> Connect With The Developer</h2>
+        <p>
+            MarketMind Intelligence AI System developed and maintained by Mohammed Usman.
+        </p>
+
+        <div class="branding-links">
+
+    <a href="https://github.com/issu321"
+       target="_blank"
+       class="brand-link">
+        <i class="fab fa-github"></i>
+        <span>GitHub Profile</span>
+    </a>
+
+    <a href="https://github.com/issu321/Marketmind-Intelegence-AI-System-Based"
+       target="_blank"
+       class="brand-link">
+        <i class="fas fa-code-branch"></i>
+        <span>Project Repository</span>
+    </a>
+
+    <a href="https://wa.me/918884294749?text=Hello%20I%20found%20your%20website%20and%20would%20like%20to%20know%20more"
+       target="_blank"
+       class="brand-link">
+        <i class="fab fa-whatsapp"></i>
+        <span>WhatsApp</span>
+    </a>
+
+
+</div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="landing-footer">
+
+    <h3 style="
+        font-size:1.4rem;
+        margin-bottom:10px;
+        color:var(--text-primary);
+    ">
+        MarketMind Intelligence AI System
+    </h3>
+
+    <p>
+        Advanced Competitive Intelligence, Market Analytics,
+        Demand Forecasting & Strategic Decision Platform
+    </p>
+
+    <div style="margin-top:20px;">
+        <strong>Developer:</strong> Mohammed Usman
+    </div>
+
+
+    <div style="margin-top:15px;">
+        © 2026 Mohammed Usman. All Rights Reserved.
+    </div>
+
+</footer></center>
+{% endblock %}

@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+
+{% block title %}Global Search{% endblock %}
+
+{% block extra_css %}
+<style>
+.search-hero {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.search-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.search-input-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.search-input-wrapper i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 2.75rem;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.search-category {
+    padding: 0.875rem 1rem;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 0.875rem;
+    cursor: pointer;
+    min-width: 130px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.5rem;
+}
+
+.search-btn {
+    padding: 0.875rem 1.5rem;
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: var(--radius-lg);
+    color: white;
+    font-family: var(--font-main);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.search-btn:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.results-count {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.result-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: 0.75rem;
+    transition: var(--transition);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.result-card:hover {
+    border-color: var(--border-glow);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-glow);
+}
+
+.result-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.result-icon.dataset { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+.result-icon.forecast { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+.result-icon.report { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+.result-icon.analysis { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+
+.result-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.result-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.result-type-badge {
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.result-type-badge.dataset { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+.result-type-badge.forecast { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+.result-type-badge.report { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+.result-type-badge.analysis { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+}
+
+.empty-state h3 {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .search-form {
+        flex-direction: column;
+    }
+    .search-category, .search-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-search" style="color: var(--accent-blue);"></i> Global Search</h1>
+        <p>Search across all your data, analyses, and reports</p>
+    </div>
+
+    <!-- Search Form -->
+    <div class="search-hero">
+        <form class="search-form" method="GET" action="{{ url_for('search') }}">
+            <div class="search-input-wrapper">
+                <i class="fas fa-search"></i>
+                <input 
+                    type="text" 
+                    name="q" 
+                    class="search-input" 
+                    placeholder="Type anything to search..." 
+                    value="{{ query }}"
+                    autocomplete="off"
+                    autofocus
+                >
+            </div>
+            <select name="category" class="search-category">
+                <option value="all" {{ 'selected' if category == 'all' else '' }}>All</option>
+                <option value="datasets" {{ 'selected' if category == 'datasets' else '' }}>Datasets</option>
+                <option value="forecasts" {{ 'selected' if category == 'forecasts' else '' }}>Forecasts</option>
+                <option value="reports" {{ 'selected' if category == 'reports' else '' }}>Reports</option>
+                <option value="analyses" {{ 'selected' if category == 'analyses' else '' }}>Analyses</option>
+            </select>
+            <button type="submit" class="search-btn">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div class="glass-card">
+        {% if query %}
+            <div class="results-header">
+                <div class="results-count">
+                    {% if results %}
+                        Found <strong>{{ results|length }}</strong> result{{ 's' if results|length != 1 else '' }}
+                    {% else %}
+                        No results for "<strong>{{ query }}</strong>"
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if results %}
+            {% for result in results %}
+                {% set url_map = {
+                    'dataset': url_for('view_dataset', dataset_id=result.id),
+                    'forecast': url_for('view_forecast', forecast_id=result.id),
+                    'report': url_for('view_report', report_id=result.id),
+                    'analysis': url_for('view_competitor', analysis_id=result.id)
+                } %}
+                <a href="{{ url_map[result.type] }}" class="result-card">
+                    <div class="result-icon {{ result.type }}">
+                        <i class="fas fa-{{ 'database' if result.type == 'dataset' else 'chart-line' if result.type == 'forecast' else 'file-lines' if result.type == 'report' else 'chess-knight' }}"></i>
+                    </div>
+                    <div class="result-info">
+                        <div class="result-title">{{ result.title }}</div>
+                        <div class="result-meta">{{ result.subtitle }} · {{ time_ago(result.created) }}</div>
+                    </div>
+                    <span class="result-type-badge {{ result.type }}">{{ result.type }}</span>
+                </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-search"></i>
+                <h3>No Results Found</h3>
+                <p>{{ 'Try a different search term or category.' if query else 'Type something above and hit Search to start.' }}</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

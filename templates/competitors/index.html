@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Competitor Intelligence{% endblock %}
+
+{% block extra_css %}
+<style>
+.competitor-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 1.5rem; border: 1px solid var(--border-color); transition: var(--transition); }
+.competitor-card:hover { border-color: var(--border-glow); transform: translateY(-2px); }
+.competitor-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.competitor-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; }
+.competitor-name { font-weight: 600; font-size: 1.125rem; }
+.score-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+.score-badge { padding: 0.25rem 0.625rem; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; }
+.swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; }
+.swot-item { padding: 0.5rem; border-radius: var(--radius-sm); font-size: 0.75rem; }
+.swot-s { background: rgba(16,185,129,0.1); border-left: 3px solid var(--accent-green); }
+.swot-w { background: rgba(239,68,68,0.1); border-left: 3px solid var(--accent-red); }
+.swot-o { background: rgba(59,130,246,0.1); border-left: 3px solid var(--accent-blue); }
+.swot-t { background: rgba(245,158,11,0.1); border-left: 3px solid var(--accent-amber); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header"><h1>Competitor Intelligence</h1><p>Analyze competitors, market position, and strategic threats</p></div>
+
+    <div class="glass-card mb-4">
+        <h3 class="mb-4"><i class="fas fa-sliders-h" style="color: var(--accent-blue);"></i> Analysis Configuration</h3>
+        <form id="competitorForm">
+            <div class="grid-4">
+                <div class="form-group">
+                    <label class="form-label">Dataset *</label>
+                    <select name="dataset_id" id="compDataset" class="form-control" required onchange="loadCompColumns()">
+                        <option value="">Select...</option>
+                        {% for d in datasets %}<option value="{{ d.id }}">{{ d.original_filename }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Competitor Column *</label>
+                    <select name="competitor_column" id="compColumn" class="form-control" required><option value="">Select...</option></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Value Column *</label>
+                    <select name="value_column" id="compValue" class="form-control" required><option value="">Select...</option></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date Column</label>
+                    <select name="date_column" id="compDate" class="form-control"><option value="">Optional</option></select>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 mt-3">
+                <button type="submit" class="glass-btn glass-btn-primary"><i class="fas fa-play"></i> Run Analysis</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="compResults"></div>
+
+    {% if analyses %}
+    <div class="section-divider"></div>
+    <h2 class="mb-4">Previous Analyses</h2>
+    <div class="grid-auto">
+        {% for a in analyses[:12] %}
+        <div class="competitor-card">
+            <div class="competitor-header">
+                <div class="competitor-avatar">{{ a.competitor_name[0] }}</div>
+                <div>
+                    <div class="competitor-name">{{ a.competitor_name }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">{{ time_ago(a.created_at) }}</div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between">
+                <span style="font-size: 0.875rem; color: var(--text-secondary);">Overall Score</span>
+                <span style="font-size: 1.25rem; font-weight: 700; color: {{ score_to_color(a.overall_score) }};">{{ a.overall_score|round|int }}</span>
+            </div>
+            <div class="score-row">
+                <span class="score-badge" style="background: rgba(239,68,68,0.15); color: var(--accent-red);">Threat: {{ a.threat_score|round|int }}</span>
+                <span class="score-badge" style="background: rgba(16,185,129,0.15); color: var(--accent-green);">Growth: {{ a.growth_score|round|int }}</span>
+                <span class="score-badge" style="background: rgba(59,130,246,0.15); color: var(--accent-blue);">Position: {{ a.market_position_score|round|int }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+async function loadCompColumns() {
+    const ds = document.getElementById('compDataset').value;
+    if (!ds) return;
+    const res = await fetch('/api/datasets/' + ds + '/columns');
+    const data = await res.json();
+    ['compColumn', 'compValue', 'compDate'].forEach(id => document.getElementById(id).innerHTML = '<option value="">Select...</option>');
+    if (data.columns) {
+        data.columns.forEach(col => {
+            const opt = `<option value="${col}">${col}</option>`;
+            document.getElementById('compColumn').innerHTML += opt;
+            document.getElementById('compValue').innerHTML += opt;
+            document.getElementById('compDate').innerHTML += opt;
+        });
+    }
+}
+
+document.getElementById('competitorForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const res = await fetch('/competitors/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+    
+    const container = document.getElementById('compResults');
+    if (data.success && data.analyses) {
+        let html = '<div class="section-divider"></div><h2 class="mb-4">Analysis Results</h2><div class="grid-auto">';
+        data.analyses.forEach(a => {
+            const color = a.overall_score > 70 ? 'var(--accent-green)' : a.overall_score > 40 ? 'var(--accent-amber)' : 'var(--accent-red)';
+            html += `
+            <div class="competitor-card">
+                <div class="competitor-header">
+                    <div class="competitor-avatar">${a.competitor_name[0]}</div>
+                    <div><div class="competitor-name">${a.competitor_name}</div><div style="font-size:0.75rem;color:var(--text-muted);">${a.data_points || 0} data points</div></div>
+                </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span style="font-size:0.875rem;">Overall Score</span>
+                    <span style="font-size:1.5rem;font-weight:700;color:${color};">${Math.round(a.overall_score || 0)}</span>
+                </div>
+                <div class="score-row">
+                    <span class="score-badge" style="background:rgba(239,68,68,0.15);color:var(--accent-red);">Threat: ${Math.round(a.threat_score || 0)}</span>
+                    <span class="score-badge" style="background:rgba(16,185,129,0.15);color:var(--accent-green);">Growth: ${Math.round(a.growth_score || 0)}</span>
+                    <span class="score-badge" style="background:rgba(139,92,246,0.15);color:var(--accent-purple);">Innovation: ${Math.round(a.innovation_score || 0)}</span>
+                </div>
+                ${a.strengths ? `<div class="swot-grid"><div class="swot-item swot-s"><strong>S:</strong> ${a.strengths.slice(0,2).join(', ')}</div><div class="swot-item swot-w"><strong>W:</strong> ${a.weaknesses.slice(0,2).join(', ')}</div></div>` : ''}
+            </div>`;
+        });
+        html += '</div>';
+        if (data.insights && data.insights.length) {
+            html += '<div class="glass-card mt-4"><h3 class="mb-3"><i class="fas fa-lightbulb" style="color:var(--accent-amber);"></i> Strategic Insights</h3>' + 
+                data.insights.map(i => `<div style="padding:0.75rem;background:var(--bg-glass);border-radius:var(--radius-md);margin-bottom:0.5rem;border-left:3px solid var(--accent-blue);font-size:0.875rem;">${i}</div>`).join('') + '</div>';
+        }
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = `<div class="glass-card mt-4" style="border-color:var(--accent-red);"><p style="color:var(--accent-red);"><i class="fas fa-exclamation-circle"></i> ${data.error || 'Analysis failed'}</p></div>`;
+    }
+});
+</script>
+{% endblock %}
